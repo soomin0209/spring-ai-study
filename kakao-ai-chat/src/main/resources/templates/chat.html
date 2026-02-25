@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 챗봇 - 카카오톡</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <!-- Markdown 렌더링 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+</head>
+<body>
+    <!-- 배경 장식 요소들 -->
+    <!-- 말풍선 1 (왼쪽 상단) -->
+    <svg class="bg-deco bubble-1" viewBox="0 0 80 80" fill="none">
+        <path d="M40 10C22 10 8 22 8 37c0 9.5 5.5 17.8 14 23l-3 12 13-7c2.6.6 5.3 1 8 1 18 0 32-12 32-27S58 10 40 10z" fill="#3A1D00"/>
+    </svg>
+
+    <!-- 말풍선 2 (오른쪽) -->
+    <svg class="bg-deco bubble-2" viewBox="0 0 60 60" fill="none">
+        <path d="M30 8C16 8 5 17 5 28.5c0 7 4 13.3 10.5 17.2L13 55l10-5.2c2.2.5 4.5.7 7 .7 14 0 25-9 25-20.5S44 8 30 8z" fill="#3A1D00"/>
+    </svg>
+
+    <!-- 하트 (왼쪽 하단) -->
+    <svg class="bg-deco heart" viewBox="0 0 50 50" fill="none">
+        <path d="M25 44s-16-10.3-16-22c0-6 4.7-11 10.5-11 3.5 0 6.5 2 8.5 5 2-3 5-5 8.5-5C42.3 11 47 16 47 22c0 11.7-16 22-16 22h-6z" fill="#3A1D00"/>
+    </svg>
+
+    <!-- 별 (오른쪽 상단) -->
+    <svg class="bg-deco star" viewBox="0 0 45 45" fill="none">
+        <path d="M22.5 5l5.5 11.2 12.3 1.8-8.9 8.7 2.1 12.3-11-5.8-11 5.8 2.1-12.3L4.7 18l12.3-1.8z" fill="#3A1D00"/>
+    </svg>
+
+    <!-- 스마일 (오른쪽 하단) -->
+    <svg class="bg-deco smile" viewBox="0 0 65 65" fill="none">
+        <circle cx="32.5" cy="32.5" r="26" fill="#3A1D00"/>
+        <circle cx="23" cy="28" r="3.5" fill="#FEE500"/>
+        <circle cx="42" cy="28" r="3.5" fill="#FEE500"/>
+        <path d="M20 38c3.5 6 14.5 6 18 0" stroke="#FEE500" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+
+    <!-- 작은 말풍선 (왼쪽 중간) -->
+    <svg class="bg-deco bubble-3" viewBox="0 0 40 40" fill="none">
+        <path d="M20 5C11 5 4 11.5 4 19.5c0 5 3 9.5 7.5 12.2L10 37l7-3.7c1 .2 2 .2 3 .2 9 0 16-6.5 16-14.5S29 5 20 5z" fill="#3A1D00"/>
+    </svg>
+
+    <!-- 카카오 브랜드 텍스트 -->
+    <div class="bg-brand">KAKAO AI CHAT</div>
+
+    <div class="kakao-chat">
+        <!-- 상단 헤더 -->
+        <div class="chat-header">
+            <button class="header-btn back-btn" title="뒤로가기">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="header-center">
+                <span class="chat-title">AI 어시스턴트</span>
+                <span class="chat-members">Spring AI 2.0</span>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="streamToggle" title="스트리밍 모드 전환" onclick="toggleStreamMode()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" id="streamIcon">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="header-btn" title="채팅 초기화" onclick="clearChat()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 날짜 구분선 -->
+        <div class="chat-body" id="chatBody">
+            <div class="date-divider">
+                <span id="todayDate"></span>
+            </div>
+
+            <!-- 안내 메시지 -->
+            <div class="system-message">
+                <p>AI 어시스턴트와의 대화를 시작하세요.</p>
+            </div>
+        </div>
+
+        <!-- 하단 입력 영역 -->
+        <div class="chat-footer">
+            <div class="input-area">
+                <button class="input-btn emoji-btn" title="이모지">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="9" cy="10" r="1" fill="currentColor"/>
+                        <circle cx="15" cy="10" r="1" fill="currentColor"/>
+                    </svg>
+                </button>
+                <textarea id="messageInput"
+                          placeholder="메시지를 입력하세요"
+                          rows="1"
+                          onkeydown="handleKeyDown(event)"
+                          oninput="autoResize(this)"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 스트리밍 모드 표시 -->
+        <div class="stream-indicator" id="streamIndicator">
+            <span class="stream-dot"></span> 스트리밍 모드
+        </div>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: kakao-ai-chat
+
+  # ================================================================
+  #  Thymeleaf 설정
+  # ================================================================
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+  # ================================================================
+  #  Spring AI 설정
+  # ================================================================
+  ai:
+    # ChatClient 자동 설정 비활성화 (AiConfig에서 수동 생성)
+    chat:
+      client:
+        enabled: false
+
+    # --- OpenAI (기본) ---
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-proj-XXXXXXX}
+      chat:
+        options:
+          # ▼ 모델을 변경해보세요: gpt-4.1-nano, gpt-4.1-mini, gpt-4.1 등
+          model: gpt-4.1-nano
+          temperature: 0.7
+          max-tokens: 2000
+
+    # --- Ollama (프로필 활성화 시에만 사용) ---
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          # ▼ Ollama 모델: llama3.2, mistral, gemma2, gpt-oss:120b 등
+          model: llama3.2
+          temperature: 0.7
+
+# ================================================================
+#  로깅 설정
+# ================================================================
+logging:
+  level:
+    com.example.kakaochat: DEBUG
+    org.springframework.ai: DEBUG
+    org.springframework.ai.chat.client: DEBUG
+    org.springframework.ai.openai: DEBUG
+    org.springframework.http.client: DEBUG
+    org.springframework.web.client.RestClient: DEBUG
+
+---
+# ================================================================
+#  Ollama 프로필
+#  실행: ./gradlew bootRun --args='--spring.profiles.active=ollama'
+# ================================================================
+spring:
+  config:
+    activate:
+      on-profile: ollama
+  ai:
+    openai:
+      enabled: false
