@@ -1,0 +1,31 @@
+public class UserService {
+
+    public String getUserRole(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        if (userId.equals("admin")) {
+            return "ADMIN";
+        } else if (userId.equals("manager")) {
+            return "MANAGER";
+        } else if (userId.equals("user")) {
+            return "USER";
+        } else {
+            return "GUEST";
+        }
+    }
+
+    public double calculateDiscount(int age, boolean isMember) {
+        double discount = 0;
+        if (age < 18) {
+            discount = 0.2;
+        }
+        if (age >= 65) {
+            discount = 0.3;
+        }
+        if (isMember == true) {
+            discount = discount + 0.1;
+        }
+        return discount;
+    }
+}

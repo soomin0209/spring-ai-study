@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 1: Spring AI - 텍스트 대화 & 프롬프트 & 구조화 출력</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f0f1a 0%, #0d1525 30%, #0f1a2a 70%, #0f0f1a 100%);
+            min-height: 100vh;
+            color: #e5e7eb;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(10px);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .badge-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .header-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .header-title {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .module-info {
+            color: #60a5fa;
+            font-size: 0.9em;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .nav-border {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(96, 165, 250, 0.1) 100%);
+            border-bottom: 2px solid #3b82f6;
+            color: #60a5fa;
+        }
+
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #9ca3af;
+            transition: all 0.3s ease;
+        }
+
+        .tab-inactive:hover {
+            color: #d1d5db;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .response-area {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .error-text {
+            color: #f87171;
+        }
+
+        .success-text {
+            color: #86efac;
+        }
+
+        button {
+            transition: all 0.3s ease;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input, textarea, select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: #6b7280;
+        }
+
+        .feature-badge {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            display: inline-block;
+            margin: 4px 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header>
+            <div class="header-badge">C</div>
+            <h1 class="header-title">텍스트 대화 & 프롬프트 & 구조화 출력</h1>
+            <p class="subtitle">Spring AI 텍스트 대화, 프롬프트 엔지니어링, 구조화된 출력 실습</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Tab Navigation -->
+            <div class="nav-border glass rounded-t-lg sticky top-24 z-40">
+                <div class="flex overflow-x-auto">
+                    <button onclick="switchTab('simple')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-simple">
+                        1. 기본 채팅
+                    </button>
+                    <button onclick="switchTab('system')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-system">
+                        2. 시스템 메시지
+                    </button>
+                    <button onclick="switchTab('stream')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-stream">
+                        3. 스트리밍
+                    </button>
+                    <button onclick="switchTab('sentiment')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-sentiment">
+                        4. 감정 분석
+                    </button>
+                    <button onclick="switchTab('product')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-product">
+                        5. 상품 설명
+                    </button>
+                    <button onclick="switchTab('structured-product')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-structured-product">
+                        6. 구조화된 상품
+                    </button>
+                    <button onclick="switchTab('code-review')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-code-review">
+                        7. 코드 리뷰
+                    </button>
+                    <button onclick="switchTab('translate-cot')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-translate-cot">
+                        8. 번역 & CoT
+                    </button>
+                    <button onclick="switchTab('zero-shot')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-zero-shot">
+                        9. 제로-샷
+                    </button>
+                    <button onclick="switchTab('step-back')" class="tab-inactive flex-shrink-0 px-6 py-4 whitespace-nowrap font-medium text-sm" id="tab-step-back">
+                        10. 스텝-백
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="glass rounded-b-lg p-8">
+                <!-- Tab 1: Simple Chat -->
+                <div id="simple" class="tab-content">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">기본 채팅 (Ch2: 텍스트 대화)</h2>
+                    <p class="text-gray-400 mb-6">ChatClient를 사용하여 기본 AI 대화를 수행합니다. 사용자 메시지만 전송합니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">메시지</label>
+                            <textarea id="simple-message" placeholder="AI에게 물어볼 내용을 입력하세요..." class="w-full px-4 py-3 rounded-lg h-24"></textarea>
+                        </div>
+
+                        <button onclick="sendSimpleChat()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="simple-btn-text">전송</span>
+                            <span id="simple-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div class="response-area" id="simple-response" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: System Message -->
+                <div id="system" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">시스템 메시지 (Ch2: 텍스트 대화)</h2>
+                    <p class="text-gray-400 mb-6">시스템 메시지로 AI의 역할을 정의하고, 사용자 메시지를 전송합니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">시스템 메시지 (AI 역할 정의)</label>
+                            <textarea id="system-message" placeholder="예: 당신은 친절한 한국어 튜터입니다..." class="w-full px-4 py-3 rounded-lg h-20">당신은 친절한 한국어 튜터입니다. 쉬운 한국어로 설명해주세요.</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">사용자 메시지</label>
+                            <textarea id="system-user-message" placeholder="질문을 입력하세요..." class="w-full px-4 py-3 rounded-lg h-20"></textarea>
+                        </div>
+
+                        <button onclick="sendSystemChat()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="system-btn-text">전송</span>
+                            <span id="system-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div class="response-area" id="system-response" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Streaming -->
+                <div id="stream" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">스트리밍 응답 (Ch2: 텍스트 대화)</h2>
+                    <p class="text-gray-400 mb-6">실시간 스트리밍으로 응답을 받습니다. EventSource를 사용하여 점진적으로 텍스트를 표시합니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">메시지</label>
+                            <textarea id="stream-message" placeholder="스트리밍으로 받을 메시지를 입력하세요..." class="w-full px-4 py-3 rounded-lg h-24"></textarea>
+                        </div>
+
+                        <button onclick="sendStreamChat()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="stream-btn-text">스트림 시작</span>
+                            <span id="stream-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div class="response-area" id="stream-response" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Sentiment Analysis -->
+                <div id="sentiment" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">감정 분석 (Ch4: 구조화된 출력)</h2>
+                    <p class="text-gray-400 mb-6">텍스트의 감정을 분석하여 구조화된 결과(sentiment, confidence, explanation, keywords)를 받습니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">분석할 텍스트</label>
+                            <textarea id="sentiment-text" placeholder="감정을 분석할 텍스트를 입력하세요..." class="w-full px-4 py-3 rounded-lg h-24"></textarea>
+                        </div>
+
+                        <button onclick="analyzeSentiment()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="sentiment-btn-text">분석</span>
+                            <span id="sentiment-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div id="sentiment-response" style="display:none;" class="glass rounded-lg p-6">
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-1">감정</p>
+                                    <p class="text-xl font-bold gradient-text" id="sentiment-result-sentiment">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-1">신뢰도</p>
+                                    <p class="text-xl font-bold text-blue-400" id="sentiment-result-confidence">-</p>
+                                </div>
+                            </div>
+                            <div class="mb-6">
+                                <p class="text-xs text-gray-400 mb-2">설명</p>
+                                <p class="text-sm text-gray-300" id="sentiment-result-explanation">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">키워드</p>
+                                <div class="flex flex-wrap gap-2" id="sentiment-result-keywords"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Product Description -->
+                <div id="product" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">상품 설명 생성 (Ch3: 프롬프트 엔지니어링)</h2>
+                    <p class="text-gray-400 mb-6">PromptTemplate을 사용하여 마케팅 상품 설명을 생성합니다.</p>
+
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">상품명</label>
+                                <input id="product-name" type="text" placeholder="예: 무선 블루투스 이어폰" class="w-full px-4 py-3 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">대상 고객</label>
+                                <input id="product-audience" type="text" placeholder="예: 음악을 사랑하는 직장인" class="w-full px-4 py-3 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">톤앤매너</label>
+                                <input id="product-tone" type="text" placeholder="예: 프리미엄하고 세련된" class="w-full px-4 py-3 rounded-lg">
+                            </div>
+                        </div>
+
+                        <button onclick="generateProductDescription()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="product-btn-text">생성</span>
+                            <span id="product-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div class="response-area" id="product-response" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 6: Structured Product -->
+                <div id="structured-product" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">구조화된 상품 설명 (Ch4: 구조화된 출력)</h2>
+                    <p class="text-gray-400 mb-6">entity를 사용하여 구조화된 ProductDescription 객체를 받습니다.</p>
+
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">상품명</label>
+                                <input id="structured-product-name" type="text" placeholder="예: 스마트워치" class="w-full px-4 py-3 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">대상 고객</label>
+                                <input id="structured-product-audience" type="text" placeholder="예: 건강 관심층" class="w-full px-4 py-3 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">톤앤매너</label>
+                                <input id="structured-product-tone" type="text" placeholder="예: 현대적이고 활동적인" class="w-full px-4 py-3 rounded-lg">
+                            </div>
+                        </div>
+
+                        <button onclick="generateStructuredProduct()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="structured-product-btn-text">생성</span>
+                            <span id="structured-product-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div id="structured-product-response" style="display:none;" class="glass rounded-lg p-6 space-y-6">
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">헤드라인</p>
+                                <p class="text-lg font-bold text-blue-400" id="structured-product-headline">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">설명</p>
+                                <p class="text-sm text-gray-300" id="structured-product-description">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-3">핵심 특징</p>
+                                <ul class="space-y-2" id="structured-product-features"></ul>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">CTA (Call to Action)</p>
+                                <p class="text-sm text-green-400" id="structured-product-cta">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">평점</p>
+                                <p class="text-sm text-yellow-400" id="structured-product-rating">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 7: Code Review -->
+                <div id="code-review" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">코드 리뷰 (Ch4: 구조화된 출력)</h2>
+                    <p class="text-gray-400 mb-6">코드를 입력하면 구조화된 리뷰 결과(score, summary, issues, suggestions, refactoredCode)를 받습니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">프로그래밍 언어</label>
+                            <select id="code-language" class="w-full px-4 py-3 rounded-lg">
+                                <option value="java">Java</option>
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="cpp">C++</option>
+                                <option value="csharp">C#</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">코드</label>
+                            <textarea id="code-content" placeholder="리뷰할 코드를 붙여넣으세요..." class="w-full px-4 py-3 rounded-lg h-32"></textarea>
+                        </div>
+
+                        <button onclick="reviewCode()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="code-btn-text">리뷰</span>
+                            <span id="code-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div id="code-review-response" style="display:none;" class="glass rounded-lg p-6 space-y-6">
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">스코어</p>
+                                <p class="text-3xl font-bold text-blue-400" id="code-review-score">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">요약</p>
+                                <p class="text-sm text-gray-300" id="code-review-summary">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-3">문제점</p>
+                                <ul class="space-y-2" id="code-review-issues"></ul>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-3">개선 제안</p>
+                                <ul class="space-y-2" id="code-review-suggestions"></ul>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-2">리팩토링된 코드</p>
+                                <div class="response-area" id="code-review-refactored"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 8: Translate & CoT -->
+                <div id="translate-cot" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">번역 & Chain-of-Thought (Ch3: 프롬프트 엔지니어링)</h2>
+                    <p class="text-gray-400 mb-6">Few-shot 번역과 CoT를 사용한 수학 문제 풀이입니다.</p>
+
+                    <!-- Translate Section -->
+                    <div class="mb-12 pb-12 border-b border-gray-700">
+                        <h3 class="text-xl font-bold text-blue-400 mb-4">번역 (Few-shot Learning)</h3>
+
+                        <div class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">번역할 텍스트</label>
+                                    <input id="translate-text" type="text" placeholder="번역할 영문을 입력하세요..." class="w-full px-4 py-3 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">대상 언어</label>
+                                    <input id="translate-lang" type="text" placeholder="예: 한국어" class="w-full px-4 py-3 rounded-lg">
+                                </div>
+                            </div>
+
+                            <button onclick="translateText()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                                <span id="translate-btn-text">번역</span>
+                                <span id="translate-spinner" class="hidden loading-spinner"></span>
+                            </button>
+
+                            <div class="response-area" id="translate-response" style="display:none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- CoT Section -->
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-400 mb-4">수학 문제 풀이 (Chain-of-Thought)</h3>
+
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">문제</label>
+                                <textarea id="cot-problem" placeholder="수학 문제를 입력하세요... 예: 25의 제곱근은?" class="w-full px-4 py-3 rounded-lg h-20"></textarea>
+                            </div>
+
+                            <button onclick="solveWithCoT()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                                <span id="cot-btn-text">풀이</span>
+                                <span id="cot-spinner" class="hidden loading-spinner"></span>
+                            </button>
+
+                            <div class="response-area" id="cot-response" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 9: Zero-shot -->
+                <div id="zero-shot" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">제로-샷 프롬프트 (Ch3: 프롬프트 엔지니어링)</h2>
+                    <p class="text-gray-400 mb-6">예시 없이 명확한 지시만으로 텍스트를 분류합니다. 모델이 사전 학습된 지식만으로 작업을 수행합니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">분류할 텍스트</label>
+                            <textarea id="zeroshot-text" placeholder="분류할 텍스트를 입력하세요... 예: 오늘 주식 시장이 크게 상승했다" class="w-full px-4 py-3 rounded-lg h-24"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">카테고리 (쉼표로 구분)</label>
+                            <input id="zeroshot-categories" type="text" placeholder="예: 정치, 경제, 스포츠, 기술, 문화, 사회" value="정치, 경제, 스포츠, 기술, 문화, 사회" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+
+                        <button onclick="classifyZeroShot()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="zeroshot-btn-text">분류</span>
+                            <span id="zeroshot-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div class="response-area" id="zeroshot-response" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 10: Step-back -->
+                <div id="step-back" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">스텝-백 프롬프트 (Ch3: 프롬프트 엔지니어링)</h2>
+                    <p class="text-gray-400 mb-6">구체적 질문에 바로 답하지 않고, 먼저 상위 개념과 원리를 탐색한 후 답변합니다. 복잡한 추론이 필요한 질문에 효과적입니다.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">질문</label>
+                            <textarea id="stepback-question" placeholder="복잡한 질문을 입력하세요... 예: 왜 비행기는 하늘을 날 수 있나요?" class="w-full px-4 py-3 rounded-lg h-24"></textarea>
+                        </div>
+
+                        <button onclick="solveStepBack()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2">
+                            <span id="stepback-btn-text">분석</span>
+                            <span id="stepback-spinner" class="hidden loading-spinner"></span>
+                        </button>
+
+                        <div class="response-area" id="stepback-response" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Tab Switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-inactive, .tab-active').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.remove('hidden');
+
+            // Add active class to clicked button
+            document.getElementById('tab-' + tabName).classList.remove('tab-inactive');
+            document.getElementById('tab-' + tabName).classList.add('tab-active');
+        }
+
+        // Initialize first tab
+        switchTab('simple');
+
+        // Helper function to show loading state
+        function setLoading(spinnerIdStr, buttonTextIdStr, isLoading) {
+            const spinner = document.getElementById(spinnerIdStr);
+            const btnText = document.getElementById(buttonTextIdStr);
+            const btn = spinner.parentElement;
+
+            if (isLoading) {
+                spinner.classList.remove('hidden');
+                btn.disabled = true;
+            } else {
+                spinner.classList.add('hidden');
+                btn.disabled = false;
+            }
+        }
+
+        // Helper function to display response
+        function displayResponse(responseElementId, content, isError = false) {
+            const elem = document.getElementById(responseElementId);
+            elem.textContent = content;
+            if (isError) {
+                elem.classList.add('error-text');
+                elem.classList.remove('success-text');
+            } else {
+                elem.classList.remove('error-text');
+                elem.classList.add('success-text');
+            }
+            elem.style.display = 'block';
+        }
+
+        // 1. Simple Chat
+        function sendSimpleChat() {
+            const message = document.getElementById('simple-message').value.trim();
+            if (!message) {
+                alert('메시지를 입력하세요.');
+                return;
+            }
+
+            setLoading('simple-spinner', 'simple-btn-text', true);
+
+            fetch('/api/chat/simple', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, systemMessage: '' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('simple-response', data.response, false);
+                setLoading('simple-spinner', 'simple-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('simple-response', 'Error: ' + err.message, true);
+                setLoading('simple-spinner', 'simple-btn-text', false);
+            });
+        }
+
+        // 2. System Message Chat
+        function sendSystemChat() {
+            const systemMessage = document.getElementById('system-message').value.trim();
+            const message = document.getElementById('system-user-message').value.trim();
+            if (!message) {
+                alert('메시지를 입력하세요.');
+                return;
+            }
+
+            setLoading('system-spinner', 'system-btn-text', true);
+
+            fetch('/api/chat/system', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, systemMessage })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('system-response', data.response, false);
+                setLoading('system-spinner', 'system-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('system-response', 'Error: ' + err.message, true);
+                setLoading('system-spinner', 'system-btn-text', false);
+            });
+        }
+
+        // 3. Stream Chat
+        function sendStreamChat() {
+            const message = document.getElementById('stream-message').value.trim();
+            if (!message) {
+                alert('메시지를 입력하세요.');
+                return;
+            }
+
+            setLoading('stream-spinner', 'stream-btn-text', true);
+            const responseElem = document.getElementById('stream-response');
+            responseElem.textContent = '';
+            responseElem.style.display = 'block';
+
+            const eventSource = new EventSource(`/api/chat/stream?message=${encodeURIComponent(message)}`);
+
+            eventSource.onmessage = function(event) {
+                // 백엔드에서 JSON 문자열로 감싸서 전송 (SSE 공백 손실 방지)
+                try {
+                    const token = JSON.parse(event.data);
+                    responseElem.textContent += token;
+                } catch (e) {
+                    responseElem.textContent += event.data;
+                }
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                setLoading('stream-spinner', 'stream-btn-text', false);
+            };
+        }
+
+        // 4. Sentiment Analysis
+        function analyzeSentiment() {
+            const text = document.getElementById('sentiment-text').value.trim();
+            if (!text) {
+                alert('텍스트를 입력하세요.');
+                return;
+            }
+
+            setLoading('sentiment-spinner', 'sentiment-btn-text', true);
+
+            fetch('/api/chat/sentiment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('sentiment-result-sentiment').textContent = data.sentiment || '-';
+                document.getElementById('sentiment-result-confidence').textContent = (data.confidence * 100).toFixed(1) + '%' || '-';
+                document.getElementById('sentiment-result-explanation').textContent = data.explanation || '-';
+
+                const keywordsContainer = document.getElementById('sentiment-result-keywords');
+                keywordsContainer.innerHTML = '';
+                if (data.keywords && Array.isArray(data.keywords)) {
+                    data.keywords.forEach(kw => {
+                        const span = document.createElement('span');
+                        span.className = 'feature-badge';
+                        span.textContent = kw;
+                        keywordsContainer.appendChild(span);
+                    });
+                }
+
+                document.getElementById('sentiment-response').style.display = 'block';
+                setLoading('sentiment-spinner', 'sentiment-btn-text', false);
+            })
+            .catch(err => {
+                alert('Error: ' + err.message);
+                setLoading('sentiment-spinner', 'sentiment-btn-text', false);
+            });
+        }
+
+        // 5. Product Description
+        function generateProductDescription() {
+            const productName = document.getElementById('product-name').value.trim();
+            const targetAudience = document.getElementById('product-audience').value.trim();
+            const tone = document.getElementById('product-tone').value.trim();
+
+            if (!productName || !targetAudience || !tone) {
+                alert('모든 필드를 입력하세요.');
+                return;
+            }
+
+            setLoading('product-spinner', 'product-btn-text', true);
+
+            fetch('/api/prompt/product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productName, targetAudience, tone })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('product-response', data.description, false);
+                setLoading('product-spinner', 'product-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('product-response', 'Error: ' + err.message, true);
+                setLoading('product-spinner', 'product-btn-text', false);
+            });
+        }
+
+        // 6. Structured Product
+        function generateStructuredProduct() {
+            const productName = document.getElementById('structured-product-name').value.trim();
+            const targetAudience = document.getElementById('structured-product-audience').value.trim();
+            const tone = document.getElementById('structured-product-tone').value.trim();
+
+            if (!productName || !targetAudience || !tone) {
+                alert('모든 필드를 입력하세요.');
+                return;
+            }
+
+            setLoading('structured-product-spinner', 'structured-product-btn-text', true);
+
+            fetch('/api/prompt/product/structured', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productName, targetAudience, tone })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('structured-product-headline').textContent = data.headline || '-';
+                document.getElementById('structured-product-description').textContent = data.description || '-';
+
+                const featuresContainer = document.getElementById('structured-product-features');
+                featuresContainer.innerHTML = '';
+                if (data.keyFeatures && Array.isArray(data.keyFeatures)) {
+                    data.keyFeatures.forEach(feature => {
+                        const li = document.createElement('li');
+                        li.className = 'text-sm text-gray-300 ml-4';
+                        li.textContent = '• ' + feature;
+                        featuresContainer.appendChild(li);
+                    });
+                }
+
+                document.getElementById('structured-product-cta').textContent = data.callToAction || '-';
+                document.getElementById('structured-product-rating').textContent = (data.rating || 0) + '/5 ⭐' || '-';
+
+                document.getElementById('structured-product-response').style.display = 'block';
+                setLoading('structured-product-spinner', 'structured-product-btn-text', false);
+            })
+            .catch(err => {
+                alert('Error: ' + err.message);
+                setLoading('structured-product-spinner', 'structured-product-btn-text', false);
+            });
+        }
+
+        // 7. Code Review
+        function reviewCode() {
+            const code = document.getElementById('code-content').value.trim();
+            const language = document.getElementById('code-language').value;
+
+            if (!code) {
+                alert('코드를 입력하세요.');
+                return;
+            }
+
+            setLoading('code-spinner', 'code-btn-text', true);
+
+            fetch('/api/prompt/code-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, language })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('code-review-score').textContent = data.score + '/100' || '-';
+                document.getElementById('code-review-summary').textContent = data.summary || '-';
+
+                const issuesContainer = document.getElementById('code-review-issues');
+                issuesContainer.innerHTML = '';
+                if (data.issues && Array.isArray(data.issues)) {
+                    data.issues.forEach(issue => {
+                        const li = document.createElement('li');
+                        li.className = 'text-sm text-red-400 ml-4';
+                        li.textContent = '• ' + issue;
+                        issuesContainer.appendChild(li);
+                    });
+                }
+
+                const suggestionsContainer = document.getElementById('code-review-suggestions');
+                suggestionsContainer.innerHTML = '';
+                if (data.suggestions && Array.isArray(data.suggestions)) {
+                    data.suggestions.forEach(sug => {
+                        const li = document.createElement('li');
+                        li.className = 'text-sm text-green-400 ml-4';
+                        li.textContent = '• ' + sug;
+                        suggestionsContainer.appendChild(li);
+                    });
+                }
+
+                document.getElementById('code-review-refactored').textContent = data.refactoredCode || '-';
+                document.getElementById('code-review-response').style.display = 'block';
+                setLoading('code-spinner', 'code-btn-text', false);
+            })
+            .catch(err => {
+                alert('Error: ' + err.message);
+                setLoading('code-spinner', 'code-btn-text', false);
+            });
+        }
+
+        // 8. Translate
+        function translateText() {
+            const text = document.getElementById('translate-text').value.trim();
+            const targetLang = document.getElementById('translate-lang').value.trim();
+
+            if (!text || !targetLang) {
+                alert('모든 필드를 입력하세요.');
+                return;
+            }
+
+            setLoading('translate-spinner', 'translate-btn-text', true);
+
+            fetch('/api/prompt/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, targetLang })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('translate-response', data.translation, false);
+                setLoading('translate-spinner', 'translate-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('translate-response', 'Error: ' + err.message, true);
+                setLoading('translate-spinner', 'translate-btn-text', false);
+            });
+        }
+
+        // 9. CoT Problem Solving
+        function solveWithCoT() {
+            const problem = document.getElementById('cot-problem').value.trim();
+
+            if (!problem) {
+                alert('문제를 입력하세요.');
+                return;
+            }
+
+            setLoading('cot-spinner', 'cot-btn-text', true);
+
+            fetch('/api/prompt/solve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ problem })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('cot-response', data.solution, false);
+                setLoading('cot-spinner', 'cot-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('cot-response', 'Error: ' + err.message, true);
+                setLoading('cot-spinner', 'cot-btn-text', false);
+            });
+        }
+
+        // 10. Zero-shot Classification
+        function classifyZeroShot() {
+            const text = document.getElementById('zeroshot-text').value.trim();
+            const categories = document.getElementById('zeroshot-categories').value.trim();
+
+            if (!text || !categories) {
+                alert('텍스트와 카테고리를 모두 입력하세요.');
+                return;
+            }
+
+            setLoading('zeroshot-spinner', 'zeroshot-btn-text', true);
+
+            fetch('/api/prompt/zero-shot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, categories })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('zeroshot-response', data.result, false);
+                setLoading('zeroshot-spinner', 'zeroshot-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('zeroshot-response', 'Error: ' + err.message, true);
+                setLoading('zeroshot-spinner', 'zeroshot-btn-text', false);
+            });
+        }
+
+        // 11. Step-back Prompting
+        function solveStepBack() {
+            const question = document.getElementById('stepback-question').value.trim();
+
+            if (!question) {
+                alert('질문을 입력하세요.');
+                return;
+            }
+
+            setLoading('stepback-spinner', 'stepback-btn-text', true);
+
+            fetch('/api/prompt/step-back', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            })
+            .then(res => res.json())
+            .then(data => {
+                displayResponse('stepback-response', data.result, false);
+                setLoading('stepback-spinner', 'stepback-btn-text', false);
+            })
+            .catch(err => {
+                displayResponse('stepback-response', 'Error: ' + err.message, true);
+                setLoading('stepback-spinner', 'stepback-btn-text', false);
+            });
+        }
+
+        // Add Enter key support for input fields
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                const activeTab = document.querySelector('.tab-content:not(.hidden)');
+                if (activeTab) {
+                    const btn = activeTab.querySelector('button');
+                    if (btn) btn.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
